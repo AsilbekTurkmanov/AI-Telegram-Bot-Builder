@@ -6,7 +6,8 @@ export function generateInitialFiles(
   botType: string,
   language: string,
   database: string,
-  features: string[]
+  features: string[],
+  botToken?: string
 ): ProjectFile[] {
   const cleanName = projectName.replace(/[^a-zA-Z0-9]/g, '');
   const timestamp = new Date().toISOString();
@@ -474,6 +475,25 @@ ENTRYPOINT ["dotnet", "${cleanName}.Api.dll"]`
     // --- 8. DOCUMENTATION & CONFIG ---
     {
       id: 'f11',
+      path: `.env`,
+      name: '.env',
+      language: 'plaintext',
+      version: 1,
+      modifiedAt: timestamp,
+      content: `# Telegram Bot Token from @BotFather
+TELEGRAM_BOT_TOKEN=${botToken || '7182940124:AAEk921jklMNOpqrSTUvwxYZ_sample'}
+
+# Database connection string
+ConnectionStrings__Default=Host=localhost;Database=${cleanName}Db;Username=postgres;Password=your_secure_password
+
+# Redis caching
+Redis__ConnectionString=localhost:6379
+
+# JWT Auth Secret
+Jwt__Secret=SuperSecretKeyThatIsAtLeast32BytesLongForSecurity123!`
+    },
+    {
+      id: 'f12',
       path: `.env.example`,
       name: '.env.example',
       language: 'plaintext',
@@ -492,7 +512,7 @@ Redis__ConnectionString=localhost:6379
 Jwt__Secret=SuperSecretKeyThatIsAtLeast32BytesLongForSecurity123!`
     },
     {
-      id: 'f12',
+      id: 'f13',
       path: `README.md`,
       name: 'README.md',
       language: 'markdown',
@@ -505,9 +525,9 @@ Powered by **AI Telegram Bot Builder** using **ASP.NET Core .NET 10 Clean Archit
 ## 🚀 Quick Start Guide
 
 ### 1. Environment Setup
-Copy \`.env.example\` to \`.env\` and provide your actual Telegram bot token from @BotFather:
+Bot token is configured in \`.env\`:
 \`\`\`bash
-cp .env.example .env
+TELEGRAM_BOT_TOKEN=${botToken || 'your_bot_token_here'}
 \`\`\`
 
 ### 2. Run with Docker Compose

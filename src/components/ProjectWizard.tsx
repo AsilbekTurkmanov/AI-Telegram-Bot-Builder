@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Bot, Check, Sparkles, Database, Layers, ShieldCheck, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Check, Sparkles, Database, Layers, ShieldCheck, Zap, Key, CheckCircle2, AlertCircle, RefreshCw, HelpCircle, ExternalLink } from 'lucide-react';
 import { Project } from '../types/project';
 import { generateInitialFiles } from '../data/templates';
+import { validateTelegramToken } from '../services/telegramBotRunner';
 
 interface ProjectWizardProps {
   initialPrompt?: string;
@@ -21,6 +22,12 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
   // Form State
   const [projectName, setProjectName] = useState('My Restaurant Bot');
   const [botName, setBotName] = useState('TastyFoodBot');
+  const [botToken, setBotToken] = useState('7182940124:AAEk921jklMNOpqrSTUvwxYZ_example');
+  const [isTokenValid, setIsTokenValid] = useState<boolean | null>(true);
+  const [isValidatingToken, setIsValidatingToken] = useState(false);
+  const [tokenValidationMsg, setTokenValidationMsg] = useState<string | null>('Namuna token biriktirildi');
+  const [showBotFatherGuide, setShowBotFatherGuide] = useState(false);
+
   const [description, setDescription] = useState(
     initialPrompt ||
       (lang === 'uz'
@@ -68,14 +75,57 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
     }
   };
 
+  const handleTestToken = async () => {
+    if (!botToken.trim()) {
+      setIsTokenValid(false);
+      setTokenValidationMsg(lang === 'uz' ? 'Iltimos, bot tokenini kiriting.' : 'Please enter a bot token.');
+      return;
+    }
+    setIsValidatingToken(true);
+    setTokenValidationMsg(null);
+
+    const result = await validateTelegramToken(botToken);
+    setIsValidatingToken(false);
+
+    if (result.isValid) {
+      setIsTokenValid(true);
+      if (result.botInfo?.username) {
+        setBotName(result.botInfo.username.replace('@', ''));
+      }
+      setTokenValidationMsg(
+        lang === 'uz'
+          ? `✅ Token muvaffaqiyatli tekshirildi! (${result.botInfo?.first_name || 'Bot'} @${result.botInfo?.username || botName})`
+          : `✅ Token validated successfully! (${result.botInfo?.first_name || 'Bot'} @${result.botInfo?.username || botName})`
+      );
+    } else {
+      setIsTokenValid(false);
+      setTokenValidationMsg(result.errorMessage || (lang === 'uz' ? "Token noto'g'ri." : 'Invalid token.'));
+    }
+  };
+
+  const handleGenerateSampleToken = () => {
+    const randomDigits = Math.floor(100000000 + Math.random() * 900000000);
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+    let randStr = '';
+    for (let i = 0; i < 35; i++) {
+      randStr += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const sample = `${randomDigits}:${randStr}`;
+    setBotToken(sample);
+    setIsTokenValid(true);
+    setTokenValidationMsg(lang === 'uz' ? 'Namuna test token yaratildi' : 'Sample test token generated');
+  };
+
   const handleFinish = () => {
+    const finalToken = botToken.trim() || '7182940124:AAEk921jklMNOpqrSTUvwxYZ_sample';
     const generatedFiles = generateInitialFiles(
       projectName,
       botName,
       botType,
       language,
       database,
-      selectedFeatures
+      selectedFeatures,
+      finalToken
     );
 
     const newProj: Project = {
@@ -83,6 +133,8 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
       userId: 'usr_default',
       name: projectName,
       botName,
+      botToken: finalToken,
+      botUsername: botName,
       description,
       botType,
       language,
@@ -91,7 +143,9 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
       status: 'Analyzing',
       progress: 10,
       currentStage: 1,
-      isBotConnected: false,
+      isBotConnected: true,
+      isRunning: true,
+      uptimeSeconds: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       features: selectedFeatures,
@@ -108,7 +162,7 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
         {
           id: 'msg_init',
           role: 'assistant',
-          content: `Assalomu alaykum! Men sizning **${projectName}** loyihangiz uchun biriktirilgan AI Architect yordamchisiman. Kodni o'zgartirish uchun istalgan savol yoki buyruq bering!`,
+          content: `Assalomu alaykum! Men sizning **${projectName}** (@${botName}) loyihangiz uchun biriktirilgan AI Architect yordamchisiman. Kodni o'zgartirish uchun istalgan savol yoki buyruq bering!`,
           timestamp: new Date().toISOString()
         }
       ]
@@ -143,11 +197,15 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
           </div>
         </div>
 
-        {/* Step 1: Basic Info */}
+        {/* Step 1: Basic Info & Telegram Token */}
         {step === 1 && (
           <div className="wizard-step-content">
-            <h2>{lang === 'uz' ? '1. Loyiha haqida ma\'lumot' : '1. Basic Information'}</h2>
-            <p className="text-muted">{lang === 'uz' ? 'Telegram botingiz nomi va maqsadini belgilang.' : 'Set up your project title and natural language prompt.'}</p>
+            <h2>{lang === 'uz' ? '1. Loyiha va Telegram Bot Sozlamalari' : '1. Basic Info & Telegram Setup'}</h2>
+            <p className="text-muted">
+              {lang === 'uz' 
+                ? 'Bot nomi va Telegram BotFather bergan HTTP API tokenini kiriting.' 
+                : 'Enter your project title, bot handle, and Telegram HTTP API token.'}
+            </p>
 
             <div className="form-grid">
               <div className="form-group">
@@ -171,6 +229,87 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
               </div>
             </div>
 
+            {/* Telegram Bot Token Section */}
+            <div className="wizard-token-card">
+              <div className="wizard-token-header">
+                <div className="flex-align gap-2">
+                  <Key size={18} color="#38bdf8" />
+                  <label className="m-0 font-semibold">
+                    {lang === 'uz' ? 'Telegram Bot Token (HTTP API)' : 'Telegram Bot Token'}
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  className="btn-link text-xs flex-align"
+                  onClick={() => setShowBotFatherGuide(!showBotFatherGuide)}
+                >
+                  <HelpCircle size={14} />
+                  <span>{lang === 'uz' ? "BotFather'dan olish qo'llanmasi" : "How to get from @BotFather"}</span>
+                </button>
+              </div>
+
+              {showBotFatherGuide && (
+                <div className="botfather-guide-box">
+                  <h4>💡 {lang === 'uz' ? "Tokenni @BotFather'dan olish ketma-ketligi:" : "How to get a Bot Token:"}</h4>
+                  <ol>
+                    <li>Telegram'da <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="flex-align inline-link"><strong>@BotFather</strong> <ExternalLink size={11} /></a> ga o'ting.</li>
+                    <li><code>/newbot</code> buyrug'ini yuboring.</li>
+                    <li>Bot nomini (masalan: <em>My Delivery Bot</em>) va unikal username'ini (masalan: <em>MyFastDelivery_bot</em>) yozing.</li>
+                    <li>BotFather bergan <strong>HTTP API Token</strong>ni (masalan: <code>7182940124:AAEk9...</code>) nusxalab oling va pastga kiriting.</li>
+                  </ol>
+                </div>
+              )}
+
+              <div className="token-input-group">
+                <input
+                  type="text"
+                  className={`token-input ${isTokenValid === true ? 'valid' : isTokenValid === false ? 'invalid' : ''}`}
+                  value={botToken}
+                  onChange={(e) => {
+                    setBotToken(e.target.value);
+                    setIsTokenValid(null);
+                    setTokenValidationMsg(null);
+                  }}
+                  placeholder="123456789:AAEk921jklMNOpqrSTUvwxYZ_example"
+                />
+
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm flex-align"
+                  onClick={handleTestToken}
+                  disabled={isValidatingToken}
+                >
+                  {isValidatingToken ? (
+                    <>
+                      <RefreshCw size={14} className="spin-icon" />
+                      <span>{lang === 'uz' ? 'Tekshirilmoqda...' : 'Checking...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={14} color="#4ade80" />
+                      <span>{lang === 'uz' ? 'Tekshirish' : 'Validate'}</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  onClick={handleGenerateSampleToken}
+                  title="Test token generatsiya qilish"
+                >
+                  {lang === 'uz' ? 'Namuna Token' : 'Sample Token'}
+                </button>
+              </div>
+
+              {tokenValidationMsg && (
+                <div className={`token-status-hint ${isTokenValid ? 'success' : 'error'}`}>
+                  {isTokenValid ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                  <span>{tokenValidationMsg}</span>
+                </div>
+              )}
+            </div>
+
             <div className="form-group">
               <label>{lang === 'uz' ? 'Bot turi (Category)' : 'Bot Type'}</label>
               <div className="type-buttons">
@@ -190,7 +329,7 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
             <div className="form-group">
               <label>{lang === 'uz' ? 'AI prompt / Talabingiz (Natural Language)' : 'Natural Language Requirements'}</label>
               <textarea
-                rows={4}
+                rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -292,12 +431,23 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
         {step === 4 && (
           <div className="wizard-step-content">
             <h2>{lang === 'uz' ? '4. Yaratishga Tayyor!' : '4. Confirm & Generate'}</h2>
-            <p className="text-muted">{lang === 'uz' ? 'Barcha sozlamalarni tekshiring va AI kod generatorini ishga tushiring.' : 'Review your architecture configuration before triggering generation.'}</p>
+            <p className="text-muted">{lang === 'uz' ? 'Barcha sozlamalarni tekshiring. Yaratilgandan so‘ng bot avtomatik ishga tushadi (Auto-Run).' : 'Review your architecture configuration. Bot will automatically start running once generated.'}</p>
 
             <div className="summary-box">
               <div className="summary-row">
                 <span>Project Name:</span>
                 <strong>{projectName} (@{botName})</strong>
+              </div>
+              <div className="summary-row">
+                <span>Telegram Bot Token:</span>
+                <strong className="text-cyan">
+                  {botToken ? `${botToken.slice(0, 8)}...${botToken.slice(-6)}` : 'Auto Generated'}
+                  <span className="token-pill-badge">🟢 Connected</span>
+                </strong>
+              </div>
+              <div className="summary-row">
+                <span>Auto-Run Status:</span>
+                <strong className="text-emerald">⚡ Avtomatik ishga tushirish (Live Polling & Simulator)</strong>
               </div>
               <div className="summary-row">
                 <span>Bot Category:</span>
@@ -312,7 +462,7 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
                 <strong>{selectedFeatures.join(', ')}</strong>
               </div>
               <div className="summary-row">
-                <span>Natural Language Specification:</span>
+                <span>Specification:</span>
                 <em>"{description}"</em>
               </div>
             </div>
@@ -340,7 +490,7 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
           ) : (
             <button className="btn-primary btn-lg flex-align glowing-btn" onClick={handleFinish}>
               <Sparkles size={18} />
-              <span>{lang === 'uz' ? '🤖 KODNI GENERATSIYA QILISH' : '🤖 GENERATE CODE NOW'}</span>
+              <span>{lang === 'uz' ? '🤖 GENERATSIYA VA ISHGA TUSHIRISH' : '🤖 GENERATE & RUN BOT NOW'}</span>
             </button>
           )}
         </div>

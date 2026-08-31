@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Bot, CheckCircle2, AlertTriangle, Code, Download, Play, Trash2, ExternalLink } from 'lucide-react';
+import { Plus, Search, Bot, CheckCircle2, AlertTriangle, Code, Download, Play, Square, Trash2, ExternalLink, Activity } from 'lucide-react';
 import { Project } from '../types/project';
 
 interface DashboardProps {
@@ -8,6 +8,7 @@ interface DashboardProps {
   onOpenProject: (project: Project) => void;
   onDeleteProject: (projectId: string) => void;
   onExportZip: (project: Project) => void;
+  onToggleRun?: (project: Project, isRunning: boolean) => void;
   lang: 'uz' | 'en';
 }
 
@@ -17,6 +18,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenProject,
   onDeleteProject,
   onExportZip,
+  onToggleRun,
   lang
 }) => {
   const [search, setSearch] = useState('');
@@ -27,6 +29,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const matchesType = typeFilter === 'All' || p.botType === typeFilter;
     return matchesSearch && matchesType;
   });
+
+  const runningCount = projects.filter(p => p.isRunning ?? (p.status === 'Running' || p.status === 'Ready')).length;
 
   return (
     <div className="dashboard-page">
@@ -44,11 +48,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="stat-card">
           <div className="stat-icon-wrapper green">
-            <CheckCircle2 size={24} />
+            <Activity size={24} />
           </div>
           <div className="stat-info">
-            <span className="stat-title">{lang === 'uz' ? 'Tayyor Botlar' : 'Ready / Active Bots'}</span>
-            <span className="stat-value">{projects.filter(p => p.status === 'Ready' || p.status === 'Deployed').length}</span>
+            <span className="stat-title">{lang === 'uz' ? 'Aktiv / Running Botlar' : 'Running Bots'}</span>
+            <span className="stat-value">{runningCount}</span>
           </div>
         </div>
 
@@ -58,7 +62,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
           <div className="stat-info">
             <span className="stat-title">{lang === 'uz' ? 'AI Generatsiyalar' : 'AI Generations'}</span>
-            <span className="stat-value">18</span>
+            <span className="stat-value">24</span>
           </div>
         </div>
 
@@ -68,7 +72,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
           <div className="stat-info">
             <span className="stat-title">{lang === 'uz' ? 'Telegram Ulanish' : 'Connected Tokens'}</span>
-            <span className="stat-value">{projects.filter(p => p.isBotConnected).length}</span>
+            <span className="stat-value">{projects.filter(p => p.isBotConnected || p.botToken).length}</span>
           </div>
         </div>
       </div>
@@ -124,59 +128,75 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       ) : (
         <div className="projects-grid">
-          {filteredProjects.map((project) => (
-            <div key={project.id} className="project-card">
-              <div className="project-card-header">
-                <div className="bot-icon">
-                  <Bot size={22} color="#38bdf8" />
+          {filteredProjects.map((project) => {
+            const isRunning = project.isRunning ?? (project.status === 'Running' || project.status === 'Ready');
+
+            return (
+              <div key={project.id} className="project-card">
+                <div className="project-card-header">
+                  <div className="bot-icon">
+                    <Bot size={22} color="#38bdf8" />
+                  </div>
+                  <div className="project-meta">
+                    <h3 className="project-name">{project.name}</h3>
+                    <span className="bot-handle">@{project.botName}</span>
+                  </div>
+
+                  <span className={`status-badge ${isRunning ? 'running' : 'stopped'}`}>
+                    <span className="mini-dot"></span>
+                    {isRunning ? 'RUNNING' : 'STOPPED'}
+                  </span>
                 </div>
-                <div className="project-meta">
-                  <h3 className="project-name">{project.name}</h3>
-                  <span className="bot-handle">@{project.botName}</span>
+
+                <p className="project-description">
+                  {project.description.slice(0, 100)}...
+                </p>
+
+                <div className="tech-tags">
+                  <span className="tag">.NET 10</span>
+                  <span className="tag">{project.database}</span>
+                  <span className="tag">{project.language}</span>
+                  <span className="tag">{project.files.length} files</span>
                 </div>
-                <span className={`status-badge ${project.status.toLowerCase()}`}>
-                  {project.status}
-                </span>
+
+                <div className="project-card-footer">
+                  <button
+                    className="btn-primary flex-1 flex-align"
+                    onClick={() => onOpenProject(project)}
+                  >
+                    <Play size={16} />
+                    <span>{lang === 'uz' ? 'IDE ni ochish' : 'Open IDE'}</span>
+                  </button>
+
+                  {onToggleRun && (
+                    <button
+                      className={`btn-icon ${isRunning ? 'active-run' : ''}`}
+                      title={isRunning ? "Botni to'xtatish" : "Botni ishga tushirish"}
+                      onClick={() => onToggleRun(project, !isRunning)}
+                    >
+                      {isRunning ? <Square size={14} color="#f87171" /> : <Play size={14} color="#4ade80" />}
+                    </button>
+                  )}
+
+                  <button
+                    className="btn-icon"
+                    title="Export ZIP"
+                    onClick={() => onExportZip(project)}
+                  >
+                    <Download size={16} />
+                  </button>
+
+                  <button
+                    className="btn-icon danger"
+                    title="Delete Project"
+                    onClick={() => onDeleteProject(project.id)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
-
-              <p className="project-description">
-                {project.description.slice(0, 100)}...
-              </p>
-
-              <div className="tech-tags">
-                <span className="tag">.NET 10</span>
-                <span className="tag">{project.database}</span>
-                <span className="tag">{project.language}</span>
-                <span className="tag">{project.files.length} files</span>
-              </div>
-
-              <div className="project-card-footer">
-                <button
-                  className="btn-primary flex-1 flex-align"
-                  onClick={() => onOpenProject(project)}
-                >
-                  <Play size={16} />
-                  <span>{lang === 'uz' ? 'IDE ni ochish' : 'Open IDE'}</span>
-                </button>
-
-                <button
-                  className="btn-icon"
-                  title="Export ZIP"
-                  onClick={() => onExportZip(project)}
-                >
-                  <Download size={16} />
-                </button>
-
-                <button
-                  className="btn-icon danger"
-                  title="Delete Project"
-                  onClick={() => onDeleteProject(project.id)}
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -47,13 +47,16 @@ export function App() {
   });
 
   // Initial Sample Project
+  // Initial Sample Project
+  const sampleProjectToken = '7182940124:AAEk921jklMNOpqrSTUvwxYZ_sample';
   const initialFiles = generateInitialFiles(
     'My Restaurant Bot',
     'MyRestaurantBot',
     'Restaurant',
     'Uzbek',
     'PostgreSQL',
-    ['/start', 'menu', 'cart', 'orders', 'delivery', 'admin_panel']
+    ['/start', 'menu', 'cart', 'orders', 'delivery', 'admin_panel'],
+    sampleProjectToken
   );
 
   const sampleProject: Project = {
@@ -66,11 +69,14 @@ export function App() {
     language: 'Uzbek',
     database: 'PostgreSQL',
     cache: 'Redis',
-    status: 'Ready',
+    status: 'Running',
     progress: 100,
-    currentStage: 9,
+    currentStage: 10,
     isBotConnected: true,
-    botToken: '7182940124:AAEk921jklMNOpqrSTUvwxYZ_sample',
+    isRunning: true,
+    uptimeSeconds: 45,
+    botToken: sampleProjectToken,
+    botUsername: 'MyRestaurantBot',
     githubRepo: 'https://github.com/user/ai-bot-my-restaurant-bot',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -115,8 +121,13 @@ export function App() {
   };
 
   const handleGenerationComplete = (updatedProject: Project) => {
-    setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
-    setActiveProject(updatedProject);
+    const runningProj: Project = {
+      ...updatedProject,
+      status: 'Running',
+      isRunning: true
+    };
+    setProjects(prev => prev.map(p => p.id === runningProj.id ? runningProj : p));
+    setActiveProject(runningProj);
     setActiveTab('builder');
   };
 
@@ -137,6 +148,15 @@ export function App() {
   const handleUpdateActiveProject = (updated: Project) => {
     setActiveProject(updated);
     setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
+  };
+
+  const handleToggleRun = (targetProject: Project, isRunning: boolean) => {
+    const updated: Project = {
+      ...targetProject,
+      isRunning,
+      status: isRunning ? 'Running' : 'Stopped'
+    };
+    handleUpdateActiveProject(updated);
   };
 
   const handleFileContentChange = (newContent: string) => {
@@ -188,6 +208,7 @@ export function App() {
             onOpenProject={handleOpenProject}
             onDeleteProject={handleDeleteProject}
             onExportZip={handleExportZip}
+            onToggleRun={handleToggleRun}
             lang={lang}
           />
         )}
@@ -223,6 +244,7 @@ export function App() {
               onOpenGitHub={() => setIsGitHubOpen(true)}
               onOpenToken={() => setIsTokenOpen(true)}
               onOpenDeploy={() => setIsDeployOpen(true)}
+              onToggleRun={(isRunning) => handleToggleRun(activeProject, isRunning)}
               lang={lang}
             />
 
@@ -294,7 +316,10 @@ export function App() {
                   )}
 
                   {builderCenterTab === 'telegram' && (
-                    <TelegramSimulator project={activeProject} />
+                    <TelegramSimulator
+                      project={activeProject}
+                      onToggleRun={(isRunning) => handleToggleRun(activeProject, isRunning)}
+                    />
                   )}
 
                   {builderCenterTab === 'database' && (

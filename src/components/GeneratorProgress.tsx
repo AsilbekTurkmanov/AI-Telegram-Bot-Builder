@@ -24,7 +24,8 @@ export const GeneratorProgress: React.FC<GeneratorProgressProps> = ({ project, o
     { id: 6, name: 'React Admin Panel', description: 'Admin UI dashboard & state', status: 'completed', log: 'Admin React dashboard created in /admin.' },
     { id: 7, name: 'Unit & Integration Tests', description: 'xUnit & Moq test suite', status: 'completed', log: 'OrderServiceTests.cs generated.' },
     { id: 8, name: 'Docker & Environment', description: 'Dockerfile & docker-compose.yml', status: 'completed', log: 'Docker-compose with PostgreSQL & Redis configured.' },
-    { id: 9, name: 'Build Validation & Docs', description: 'dotnet build check & README.md', status: 'completed', log: 'Build validation PASSED. Solution ready!' }
+    { id: 9, name: 'Build Validation & Docs', description: 'dotnet build check & README.md', status: 'completed', log: 'Build validation PASSED. Solution ready!' },
+    { id: 10, name: 'Live Bot Startup', description: 'Connecting Telegram API & Starting Polling Engine', status: 'completed', log: `Bot @${project.botName} successfully STARTED! Listening for incoming updates...` }
   ];
 
   useEffect(() => {
@@ -35,20 +36,21 @@ export const GeneratorProgress: React.FC<GeneratorProgressProps> = ({ project, o
         setCurrentStageIdx(stage);
         setLogs(prev => [
           ...prev,
-          `[${new Date().toLocaleTimeString()}] Stage ${stage + 1}/9: ${stages[stage].name} — ${stages[stage].log}`
+          `[${new Date().toLocaleTimeString()}] Stage ${stage + 1}/10: ${stages[stage].name} — ${stages[stage].log}`
         ]);
       } else {
         clearInterval(interval);
         setTimeout(() => {
           onComplete({
             ...project,
-            status: 'Ready',
+            status: 'Running',
+            isRunning: true,
             progress: 100,
-            currentStage: 9
+            currentStage: 10
           });
         }, 800);
       }
-    }, 600);
+    }, 500);
 
     return () => clearInterval(interval);
   }, []);

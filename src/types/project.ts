@@ -4,6 +4,8 @@ export type ProjectStatus =
   | 'Generating' 
   | 'Validating' 
   | 'Ready' 
+  | 'Running'
+  | 'Stopped'
   | 'Failed' 
   | 'Deploying' 
   | 'Deployed' 
@@ -58,8 +60,11 @@ export interface Project {
   progress: number;
   currentStage: number;
   botToken?: string;
+  botUsername?: string;
   githubRepo?: string;
   isBotConnected: boolean;
+  isRunning?: boolean;
+  uptimeSeconds?: number;
   createdAt: string;
   updatedAt: string;
   features: string[];
