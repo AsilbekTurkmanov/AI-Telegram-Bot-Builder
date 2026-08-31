@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Bot, Check, Sparkles, Database, Layers, ShieldCheck, Zap, Key, CheckCircle2, AlertCircle, RefreshCw, HelpCircle, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Check, Sparkles, Database, Layers, ShieldCheck, Zap, Key, CheckCircle2, AlertCircle, RefreshCw, HelpCircle, ExternalLink, Shield } from 'lucide-react';
 import { Project } from '../types/project';
 import { generateInitialFiles } from '../data/templates';
 import { validateTelegramToken } from '../services/telegramBotRunner';
@@ -19,15 +19,16 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
 }) => {
   const [step, setStep] = useState(1);
 
-  // Form State
+  // Step 1: Telegram Bot Token (Starts Empty so it explicitly asks user)
+  const [botToken, setBotToken] = useState('');
+  const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null);
+  const [isValidatingToken, setIsValidatingToken] = useState(false);
+  const [tokenValidationMsg, setTokenValidationMsg] = useState<string | null>(null);
+  const [stepError, setStepError] = useState<string | null>(null);
+
+  // Step 2: Basic Info
   const [projectName, setProjectName] = useState('My Restaurant Bot');
   const [botName, setBotName] = useState('TastyFoodBot');
-  const [botToken, setBotToken] = useState('7182940124:AAEk921jklMNOpqrSTUvwxYZ_example');
-  const [isTokenValid, setIsTokenValid] = useState<boolean | null>(true);
-  const [isValidatingToken, setIsValidatingToken] = useState(false);
-  const [tokenValidationMsg, setTokenValidationMsg] = useState<string | null>('Namuna token biriktirildi');
-  const [showBotFatherGuide, setShowBotFatherGuide] = useState(false);
-
   const [description, setDescription] = useState(
     initialPrompt ||
       (lang === 'uz'
@@ -39,7 +40,7 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
   const [database, setDatabase] = useState<'PostgreSQL' | 'SQLite'>('PostgreSQL');
   const [cache, setCache] = useState<'Redis' | 'None'>('Redis');
 
-  // Selected Features
+  // Step 3: Selected Features
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([
     '/start',
     'registration',
@@ -78,11 +79,12 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
   const handleTestToken = async () => {
     if (!botToken.trim()) {
       setIsTokenValid(false);
-      setTokenValidationMsg(lang === 'uz' ? 'Iltimos, bot tokenini kiriting.' : 'Please enter a bot token.');
+      setTokenValidationMsg(lang === 'uz' ? 'Iltimos, avval bot tokenini kiriting.' : 'Please enter a bot token first.');
       return;
     }
     setIsValidatingToken(true);
     setTokenValidationMsg(null);
+    setStepError(null);
 
     const result = await validateTelegramToken(botToken);
     setIsValidatingToken(false);
@@ -92,10 +94,13 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
       if (result.botInfo?.username) {
         setBotName(result.botInfo.username.replace('@', ''));
       }
+      if (result.botInfo?.first_name) {
+        setProjectName(`${result.botInfo.first_name} Bot`);
+      }
       setTokenValidationMsg(
         lang === 'uz'
           ? `✅ Token muvaffaqiyatli tekshirildi! (${result.botInfo?.first_name || 'Bot'} @${result.botInfo?.username || botName})`
-          : `✅ Token validated successfully! (${result.botInfo?.first_name || 'Bot'} @${result.botInfo?.username || botName})`
+          : `✅ Token verified! (${result.botInfo?.first_name || 'Bot'} @${result.botInfo?.username || botName})`
       );
     } else {
       setIsTokenValid(false);
@@ -113,7 +118,37 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
     const sample = `${randomDigits}:${randStr}`;
     setBotToken(sample);
     setIsTokenValid(true);
-    setTokenValidationMsg(lang === 'uz' ? 'Namuna test token yaratildi' : 'Sample test token generated');
+    setStepError(null);
+    setTokenValidationMsg(lang === 'uz' ? 'Namuna test token biriktirildi' : 'Sample test token generated');
+  };
+
+  const handleNextStep = () => {
+    setStepError(null);
+
+    // Validation for Step 1 (Token is REQUIRED)
+    if (step === 1) {
+      if (!botToken.trim()) {
+        setStepError(
+          lang === 'uz'
+            ? "⚠️ Iltimos, Telegram Bot Tokenini kiriting! (Agar hozircha tokeningiz bo'lmasa, 'Namuna Token' tugmasini bosing)"
+            : "⚠️ Please enter your Telegram Bot Token! (Or click 'Sample Token' to test)"
+        );
+        return;
+      }
+    }
+
+    if (step === 2) {
+      if (!projectName.trim() || !botName.trim()) {
+        setStepError(
+          lang === 'uz'
+            ? "⚠️ Loyiha nomi va Bot username'ini kiriting."
+            : "⚠️ Please enter project name and bot username."
+        );
+        return;
+      }
+    }
+
+    setStep(prev => prev + 1);
   };
 
   const handleFinish = () => {
@@ -174,108 +209,99 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
   return (
     <div className="wizard-container">
       <div className="wizard-card">
-        {/* Wizard Progress Steps */}
+        {/* Wizard Progress Steps (5 Steps) */}
         <div className="wizard-steps-header">
           <div className={`step-item ${step >= 1 ? 'active' : ''}`}>
             <span className="step-num">1</span>
-            <span className="step-label">{lang === 'uz' ? 'Asosiy Ma\'lumotlar' : 'Basic Info'}</span>
+            <span className="step-label">{lang === 'uz' ? 'Bot Token' : 'Bot Token'}</span>
           </div>
           <div className="step-divider"></div>
           <div className={`step-item ${step >= 2 ? 'active' : ''}`}>
             <span className="step-num">2</span>
-            <span className="step-label">{lang === 'uz' ? 'Funksiyalar' : 'Features'}</span>
+            <span className="step-label">{lang === 'uz' ? 'Ma\'lumotlar' : 'Basic Info'}</span>
           </div>
           <div className="step-divider"></div>
           <div className={`step-item ${step >= 3 ? 'active' : ''}`}>
             <span className="step-num">3</span>
-            <span className="step-label">{lang === 'uz' ? 'Arxitektura' : 'Architecture'}</span>
+            <span className="step-label">{lang === 'uz' ? 'Funksiyalar' : 'Features'}</span>
           </div>
           <div className="step-divider"></div>
           <div className={`step-item ${step >= 4 ? 'active' : ''}`}>
             <span className="step-num">4</span>
+            <span className="step-label">{lang === 'uz' ? 'Stack' : 'Stack'}</span>
+          </div>
+          <div className="step-divider"></div>
+          <div className={`step-item ${step >= 5 ? 'active' : ''}`}>
+            <span className="step-num">5</span>
             <span className="step-label">{lang === 'uz' ? 'Tasdiqlash' : 'Confirm'}</span>
           </div>
         </div>
 
-        {/* Step 1: Basic Info & Telegram Token */}
+        {/* STEP 1: EXPLICIT TELEGRAM BOT TOKEN REQUEST */}
         {step === 1 && (
           <div className="wizard-step-content">
-            <h2>{lang === 'uz' ? '1. Loyiha va Telegram Bot Sozlamalari' : '1. Basic Info & Telegram Setup'}</h2>
-            <p className="text-muted">
-              {lang === 'uz' 
-                ? 'Bot nomi va Telegram BotFather bergan HTTP API tokenini kiriting.' 
-                : 'Enter your project title, bot handle, and Telegram HTTP API token.'}
-            </p>
-
-            <div className="form-grid">
-              <div className="form-group">
-                <label>{lang === 'uz' ? 'Loyiha nomi' : 'Project Name'}</label>
-                <input
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  placeholder="My Restaurant Bot"
-                />
+            <div className="step-title-with-icon">
+              <div className="icon-badge-cyan">
+                <Key size={26} color="#38bdf8" />
               </div>
-
-              <div className="form-group">
-                <label>{lang === 'uz' ? 'Telegram Bot Username' : 'Telegram Bot Name'}</label>
-                <input
-                  type="text"
-                  value={botName}
-                  onChange={(e) => setBotName(e.target.value)}
-                  placeholder="TastyFoodBot"
-                />
+              <div>
+                <h2>{lang === 'uz' ? '1. Telegram Bot Tokenini Kiriting' : '1. Enter Telegram Bot Token'}</h2>
+                <p className="text-muted">
+                  {lang === 'uz'
+                    ? 'Botingiz serverda to‘liq ishlab turishi va xabarlarni qabul qilishi uchun @BotFather tokenini kiriting.'
+                    : 'To run your bot and listen to messages in real-time, provide your Bot HTTP API token.'}
+                </p>
               </div>
             </div>
 
-            {/* Telegram Bot Token Section */}
-            <div className="wizard-token-card">
-              <div className="wizard-token-header">
-                <div className="flex-align gap-2">
-                  <Key size={18} color="#38bdf8" />
-                  <label className="m-0 font-semibold">
-                    {lang === 'uz' ? 'Telegram Bot Token (HTTP API)' : 'Telegram Bot Token'}
-                  </label>
-                </div>
-                <button
-                  type="button"
-                  className="btn-link text-xs flex-align"
-                  onClick={() => setShowBotFatherGuide(!showBotFatherGuide)}
-                >
-                  <HelpCircle size={14} />
-                  <span>{lang === 'uz' ? "BotFather'dan olish qo'llanmasi" : "How to get from @BotFather"}</span>
-                </button>
+            {/* Visual BotFather Step-by-Step Guide */}
+            <div className="botfather-guide-card">
+              <div className="guide-header">
+                <Sparkles size={16} color="#38bdf8" />
+                <span>{lang === 'uz' ? "Tokenni olish yo'riqnomasi (@BotFather):" : "How to get a Token from @BotFather:"}</span>
               </div>
-
-              {showBotFatherGuide && (
-                <div className="botfather-guide-box">
-                  <h4>💡 {lang === 'uz' ? "Tokenni @BotFather'dan olish ketma-ketligi:" : "How to get a Bot Token:"}</h4>
-                  <ol>
-                    <li>Telegram'da <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="flex-align inline-link"><strong>@BotFather</strong> <ExternalLink size={11} /></a> ga o'ting.</li>
-                    <li><code>/newbot</code> buyrug'ini yuboring.</li>
-                    <li>Bot nomini (masalan: <em>My Delivery Bot</em>) va unikal username'ini (masalan: <em>MyFastDelivery_bot</em>) yozing.</li>
-                    <li>BotFather bergan <strong>HTTP API Token</strong>ni (masalan: <code>7182940124:AAEk9...</code>) nusxalab oling va pastga kiriting.</li>
-                  </ol>
+              <div className="guide-steps-grid">
+                <div className="guide-step">
+                  <span className="guide-num">1</span>
+                  <span>Telegramda <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="inline-link"><strong>@BotFather</strong> <ExternalLink size={11} /></a> ga kiring</span>
                 </div>
-              )}
+                <div className="guide-step">
+                  <span className="guide-num">2</span>
+                  <span><code>/newbot</code> yuborib, bot nomi va <code>_bot</code> bilan tugovchi username bering</span>
+                </div>
+                <div className="guide-step">
+                  <span className="guide-num">3</span>
+                  <span>Berilgan <strong>HTTP API Token</strong>ni nusxalab, pastdagi maydonga kiriting</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Token Input Section */}
+            <div className="wizard-token-large-card">
+              <label className="token-field-label">
+                <Key size={16} color="#38bdf8" />
+                <span>{lang === 'uz' ? 'Telegram Bot Token (HTTP API):' : 'Telegram Bot Token (HTTP API):'}</span>
+                <span className="required-star">*</span>
+              </label>
 
               <div className="token-input-group">
                 <input
                   type="text"
+                  autoFocus
                   className={`token-input ${isTokenValid === true ? 'valid' : isTokenValid === false ? 'invalid' : ''}`}
                   value={botToken}
                   onChange={(e) => {
                     setBotToken(e.target.value);
                     setIsTokenValid(null);
                     setTokenValidationMsg(null);
+                    setStepError(null);
                   }}
-                  placeholder="123456789:AAEk921jklMNOpqrSTUvwxYZ_example"
+                  placeholder="Masalan: 7182940124:AAEk921jklMNOpqrSTUvwxYZ_sample"
                 />
 
                 <button
                   type="button"
-                  className="btn-secondary btn-sm flex-align"
+                  className="btn-secondary flex-align btn-token-action"
                   onClick={handleTestToken}
                   disabled={isValidatingToken}
                 >
@@ -294,24 +320,61 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
 
                 <button
                   type="button"
-                  className="btn-secondary btn-sm"
+                  className="btn-secondary btn-token-action"
                   onClick={handleGenerateSampleToken}
                   title="Test token generatsiya qilish"
                 >
-                  {lang === 'uz' ? 'Namuna Token' : 'Sample Token'}
+                  {lang === 'uz' ? '⚡ Namuna Token' : '⚡ Sample Token'}
                 </button>
               </div>
 
               {tokenValidationMsg && (
                 <div className={`token-status-hint ${isTokenValid ? 'success' : 'error'}`}>
-                  {isTokenValid ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                  {isTokenValid ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
                   <span>{tokenValidationMsg}</span>
                 </div>
               )}
+
+              {stepError && (
+                <div className="wizard-step-error-banner">
+                  <AlertCircle size={16} />
+                  <span>{stepError}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: BASIC INFO & AI PROMPT */}
+        {step === 2 && (
+          <div className="wizard-step-content">
+            <h2>{lang === 'uz' ? '2. Loyiha va Bot Ma\'lumotlari' : '2. Project Details & AI Prompt'}</h2>
+            <p className="text-muted">{lang === 'uz' ? 'Bot nomi, username va AI arxitektori uchun talablaringizni belgilang.' : 'Set up your bot handle, category and natural language specification.'}</p>
+
+            <div className="form-grid">
+              <div className="form-group">
+                <label>{lang === 'uz' ? 'Loyiha nomi' : 'Project Name'}</label>
+                <input
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="My Restaurant Bot"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>{lang === 'uz' ? 'Telegram Bot Username (@handle)' : 'Telegram Bot Handle'}</label>
+                <input
+                  type="text"
+                  value={botName}
+                  onChange={(e) => setBotName(e.target.value)}
+                  placeholder="TastyFoodBot"
+                />
+              </div>
             </div>
 
             <div className="form-group">
-              <label>{lang === 'uz' ? 'Bot turi (Category)' : 'Bot Type'}</label>
+              <label>{lang === 'uz' ? 'Bot turi (Category)' : 'Bot Category'}</label>
               <div className="type-buttons">
                 {['Restaurant', 'E-Commerce', 'Support', 'Booking', 'Custom'].map((t) => (
                   <button
@@ -329,18 +392,26 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
             <div className="form-group">
               <label>{lang === 'uz' ? 'AI prompt / Talabingiz (Natural Language)' : 'Natural Language Requirements'}</label>
               <textarea
-                rows={3}
+                rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                placeholder="Bot nima qilishi kerak..."
               />
             </div>
+
+            {stepError && (
+              <div className="wizard-step-error-banner">
+                <AlertCircle size={16} />
+                <span>{stepError}</span>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Step 2: Features */}
-        {step === 2 && (
+        {/* STEP 3: FEATURES */}
+        {step === 3 && (
           <div className="wizard-step-content">
-            <h2>{lang === 'uz' ? '2. Bot Modullari va Imkoniyatlari' : '2. Bot Features & Modules'}</h2>
+            <h2>{lang === 'uz' ? '3. Bot Modullari va Imkoniyatlari' : '3. Bot Features & Modules'}</h2>
             <p className="text-muted">{lang === 'uz' ? 'Botingiz tarkibiga kiruvchi funksiyalarni tanlang.' : 'Check the required capabilities for your generated bot.'}</p>
 
             <div className="features-checkbox-grid">
@@ -363,10 +434,10 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
           </div>
         )}
 
-        {/* Step 3: Architecture */}
-        {step === 3 && (
+        {/* STEP 4: ARCHITECTURE */}
+        {step === 4 && (
           <div className="wizard-step-content">
-            <h2>{lang === 'uz' ? '3. Texnologik Arxitektura' : '3. Tech Stack & Architecture'}</h2>
+            <h2>{lang === 'uz' ? '4. Texnologik Arxitektura' : '4. Tech Stack & Architecture'}</h2>
             <p className="text-muted">{lang === 'uz' ? 'AI yaratuvchi backend va ma\'lumotlar bazasi texnologiyalari.' : 'Choose the stack for code generation.'}</p>
 
             <div className="arch-options-grid">
@@ -427,23 +498,23 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
           </div>
         )}
 
-        {/* Step 4: Confirmation */}
-        {step === 4 && (
+        {/* STEP 5: CONFIRMATION & AUTO-RUN */}
+        {step === 5 && (
           <div className="wizard-step-content">
-            <h2>{lang === 'uz' ? '4. Yaratishga Tayyor!' : '4. Confirm & Generate'}</h2>
-            <p className="text-muted">{lang === 'uz' ? 'Barcha sozlamalarni tekshiring. Yaratilgandan so‘ng bot avtomatik ishga tushadi (Auto-Run).' : 'Review your architecture configuration. Bot will automatically start running once generated.'}</p>
+            <h2>{lang === 'uz' ? '5. Yaratishga Tayyor!' : '5. Confirm & Generate'}</h2>
+            <p className="text-muted">{lang === 'uz' ? 'Barcha sozlamalarni tekshiring. Yaratilgandan so‘ng bot avtomatik ishga tushadi (Auto-Run).' : 'Review your configuration. Bot will start running automatically once generated.'}</p>
 
             <div className="summary-box">
               <div className="summary-row">
-                <span>Project Name:</span>
-                <strong>{projectName} (@{botName})</strong>
-              </div>
-              <div className="summary-row">
                 <span>Telegram Bot Token:</span>
                 <strong className="text-cyan">
-                  {botToken ? `${botToken.slice(0, 8)}...${botToken.slice(-6)}` : 'Auto Generated'}
+                  {botToken ? `${botToken.slice(0, 8)}...${botToken.slice(-6)}` : 'Namuna Token'}
                   <span className="token-pill-badge">🟢 Connected</span>
                 </strong>
+              </div>
+              <div className="summary-row">
+                <span>Project Name:</span>
+                <strong>{projectName} (@{botName})</strong>
               </div>
               <div className="summary-row">
                 <span>Auto-Run Status:</span>
@@ -472,7 +543,7 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
         {/* Wizard Navigation Footer */}
         <div className="wizard-footer">
           {step > 1 ? (
-            <button className="btn-secondary flex-align" onClick={() => setStep(step - 1)}>
+            <button className="btn-secondary flex-align" onClick={() => { setStepError(null); setStep(step - 1); }}>
               <ArrowLeft size={16} />
               <span>{lang === 'uz' ? 'Orqaga' : 'Back'}</span>
             </button>
@@ -482,8 +553,8 @@ export const ProjectWizard: React.FC<ProjectWizardProps> = ({
             </button>
           )}
 
-          {step < 4 ? (
-            <button className="btn-primary flex-align" onClick={() => setStep(step + 1)}>
+          {step < 5 ? (
+            <button className="btn-primary flex-align" onClick={handleNextStep}>
               <span>{lang === 'uz' ? 'Keyingisi' : 'Next'}</span>
               <ArrowRight size={16} />
             </button>
