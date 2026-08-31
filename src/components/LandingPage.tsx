@@ -169,6 +169,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartWizard, lang })
         <h2 className="section-title text-center">
           {lang === 'uz' ? 'Mos Keluvchi Rejani Tanlang' : 'Simple, Transparent Pricing'}
         </h2>
+        <p className="text-center text-muted" style={{ marginTop: '-16px', marginBottom: '28px' }}>
+          {lang === 'uz' ? '🔥 Barcha tariflar hozirda vaqtinchalik 100% BEPUL ($0) aksiyada!' : '🔥 All plans are currently 100% FREE ($0) during special promo!'}
+        </p>
 
         <div className="pricing-grid">
           {/* Free Plan */}
@@ -191,10 +194,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartWizard, lang })
 
           {/* Pro Plan */}
           <div className="pricing-card popular">
-            <div className="popular-badge">Most Popular</div>
+            <div className="popular-badge">{lang === 'uz' ? '100% Bepul Aksiya' : '100% Free Promo'}</div>
             <h3 className="plan-name">Pro Developer</h3>
-            <div className="plan-price">$29 <span>/ month</span></div>
-            <p className="plan-desc">{lang === 'uz' ? 'Professional dasturchilar va bizneslar uchun' : 'For developers building real production bots'}</p>
+            <div className="plan-price">
+              <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '18px', marginRight: '6px' }}>$29</span>
+              <strong style={{ color: '#4ade80' }}>$0</strong> <span>/ month</span>
+            </div>
+            <p className="plan-desc">{lang === 'uz' ? 'Professional dasturchilar va bizneslar uchun (Vaqtinchalik $0)' : 'For developers building real production bots (Promo $0)'}</p>
 
             <ul className="plan-features">
               <li><CheckCircle2 size={16} color="#4ade80" /> Unlimited Projects</li>
@@ -205,16 +211,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartWizard, lang })
               <li><CheckCircle2 size={16} color="#4ade80" /> Docker Deployment Configs</li>
             </ul>
 
-            <button className="btn-primary w-full" onClick={() => onStartWizard()}>
-              {lang === 'uz' ? 'Pro ga o\'tish' : 'Upgrade to Pro'}
+            <button className="btn-primary w-full glowing-btn" onClick={() => onStartWizard()}>
+              {lang === 'uz' ? 'Pro ni Bepul Faollashtirish ($0)' : 'Activate Pro Free ($0)'}
             </button>
           </div>
 
           {/* Enterprise */}
           <div className="pricing-card">
+            <div className="popular-badge" style={{ background: '#38bdf8' }}>{lang === 'uz' ? 'Vaqtinchalik Bepul' : 'Free Promo'}</div>
             <h3 className="plan-name">Enterprise</h3>
-            <div className="plan-price">$99 <span>/ month</span></div>
-            <p className="plan-desc">{lang === 'uz' ? 'Katta jamoalar va agentliklar uchun' : 'For agencies and large scale bots'}</p>
+            <div className="plan-price">
+              <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '18px', marginRight: '6px' }}>$99</span>
+              <strong style={{ color: '#38bdf8' }}>$0</strong> <span>/ month</span>
+            </div>
+            <p className="plan-desc">{lang === 'uz' ? 'Katta jamoalar va agentliklar uchun (Vaqtinchalik $0)' : 'For agencies and large scale bots (Promo $0)'}</p>
 
             <ul className="plan-features">
               <li><CheckCircle2 size={16} color="#4ade80" /> Custom AI Model Routing</li>
@@ -224,7 +234,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartWizard, lang })
             </ul>
 
             <button className="btn-secondary w-full" onClick={() => onStartWizard()}>
-              {lang === 'uz' ? 'Bog\'lanish' : 'Contact Enterprise'}
+              {lang === 'uz' ? 'Enterprise Bepul Kirish ($0)' : 'Access Enterprise Free ($0)'}
             </button>
           </div>
         </div>
